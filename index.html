@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6ef">
+  <meta name="description" content="体验 DocPro 的选区编辑、差异审阅与一步撤销。">
+  <title>欢迎使用 DocPro · 写作工作台</title>
+  <style>
+    :root { --ink:#342435; --plum:#573353; --paper:#f8f6ef; --quiet:#6b6267; --rule:#cfc8c7; --yellow:#efbe48; --sans:"Inter","Microsoft YaHei","PingFang SC",system-ui,sans-serif; --mono:"IBM Plex Mono",Consolas,monospace; }
+    * { box-sizing:border-box }
+    html { scroll-behavior:smooth }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased }
+    button,a { color:inherit; font:inherit }
+    button { cursor:pointer }
+    a { text-decoration:none }
+    a:focus-visible,button:focus-visible { outline:3px solid #9c611c; outline-offset:5px }
+    ::selection { background:#f4d171; color:#342435 }
+    [hidden] { display:none !important }
+    .wrap { width:min(calc(100% - 112px),1240px); margin-inline:auto }
+    header { border-bottom:1px solid var(--rule) }
+    .topbar { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:24px }
+    .brand { display:inline-flex; align-items:center; gap:11px; font-family:"Inter",Arial,sans-serif; font-size:30px; font-weight:800; letter-spacing:-1.8px }
+    .mark { width:32px; height:35px; position:relative; color:var(--plum); display:inline-block; transform:rotate(-7deg) }
+    .mark::before,.mark::after { content:""; position:absolute; width:22px; height:27px; border:2px solid currentColor; border-radius:2px; background:var(--paper) }
+    .mark::before { left:2px; top:6px; background:#c9bbc9 }
+    .mark::after { left:7px; top:1px; background:linear-gradient(var(--plum),var(--plum)) 4px 7px/12px 3px no-repeat,linear-gradient(var(--plum),var(--plum)) 4px 13px/9px 2px no-repeat,linear-gradient(var(--plum),var(--plum)) 4px 18px/12px 2px no-repeat,var(--paper) }
+    nav,.actions { display:flex; align-items:center; gap:28px }
+    nav { font-size:14px; font-weight:600 }
+    nav a:hover,.text-link:hover { color:#854d7e }
+    .button { display:inline-flex; align-items:center; justify-content:center; gap:14px; padding:13px 21px; border:1px solid var(--plum); border-radius:5px; background:var(--plum); color:#fffaf7; font-weight:650; font-size:15px; transition:background .2s,transform .2s }
+    .button:hover { background:#72446b; color:white; transform:translateY(-2px) }
+    .button.small { padding:9px 15px; font-size:13px }
+    .arrow { font:normal 1.3em/1 Arial,sans-serif }
+    .hero { display:grid; grid-template-columns:.94fr 1.06fr; gap:clamp(28px,4vw,68px); align-items:center; padding-block:clamp(40px,4.4vw,69px); border-bottom:1px solid var(--rule) }
+    .kicker { margin:0; display:flex; align-items:center; gap:10px; color:var(--plum); font:600 11px/1.5 var(--mono); letter-spacing:1.5px }
+    .kicker::before { content:""; width:24px; height:2px; background:var(--plum) }
+    h1,h2,h3,p,figure { margin:0 }
+    h1 { font-size:clamp(52px,5.25vw,80px); line-height:1.19; letter-spacing:-.067em; font-weight:850; margin:18px 0 21px }
+    .headline-line { display:block; white-space:nowrap }
+    .swash { position:relative; isolation:isolate; color:var(--plum) }
+    .swash::after { content:""; position:absolute; bottom:.02em; left:-1%; right:-2%; z-index:-1; height:.18em; background:#f0c24e; transform:rotate(-1deg); clip-path:polygon(0 18%,98% 0,100% 68%,75% 85%,1% 100%); transform-origin:left; animation:underline-in .85s ease-out both }
+    @keyframes underline-in { from { transform:scaleX(.06) rotate(-1deg) } to { transform:scaleX(1) rotate(-1deg) } }
+    .lead { color:var(--quiet); font-size:clamp(15px,1.18vw,18px); line-height:1.9; max-width:29em }
+    .actions { gap:24px; margin-top:26px; flex-wrap:wrap }
+    .text-link { display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:650; border-bottom:1px solid #95868f; padding-block:4px }
+    .spec { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:23px; color:var(--quiet); font:12px/1.5 var(--mono) }
+    .spec i { width:5px; height:5px; border-radius:50%; background:#64775d }
+    .spec b { color:#b4aaa9; font-weight:400 }
+    .plate { position:relative; overflow:hidden; aspect-ratio:1.39; background-color:#eae4ef; background-image:linear-gradient(#7d657410 1px,transparent 1px),linear-gradient(90deg,#7d657410 1px,transparent 1px); background-size:21px 21px; border:1px solid #c4b6c9; border-radius:7px }
+    .plate::after { content:""; position:absolute; pointer-events:none; inset:0; opacity:.18; background-image:radial-gradient(#63445c 0.5px,transparent .8px); background-size:4px 4px; mix-blend-mode:multiply }
+    .plate canvas { position:absolute; inset:0; width:100%; height:100% }
+    .cross { width:10px; height:10px; position:absolute; background:linear-gradient(#947d95,#947d95) center/100% 1px no-repeat,linear-gradient(#947d95,#947d95) center/1px 100% no-repeat }
+    .tl { top:14px; left:14px } .tr { top:14px; right:14px } .br { right:14px; bottom:14px }
+    figcaption { position:absolute; bottom:13px; left:17px; color:#625068; font:10px/1.5 var(--mono); letter-spacing:1px }
+    .replay { position:absolute; right:28px; bottom:11px; z-index:1; padding:3px 7px; border:0; background:#eae4ef; color:#634f67; font:12px/1.5 var(--sans); border-radius:3px }
+    .replay:hover { background:#ddd2e2 }
+    section[id] { scroll-margin-top:22px }
+    .features,.demo { padding:36px 0 42px }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:20px }
+    h2 { font-size:clamp(27px,2.5vw,36px); line-height:1.35; letter-spacing:-.055em }
+    .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
+    .card { position:relative; padding:23px; border:1px solid #c9bdc9; border-radius:6px; overflow:hidden; background:#eee8ef }
+    .card:nth-child(2) { background:#f7efdc; border-color:#d6c9ae }
+    .card:nth-child(3) { background:#eaf0e7; border-color:#bdc9bd }
+    .card-symbol { height:43px; display:flex; align-items:center; color:var(--plum); margin-bottom:13px }
+    .selection-icon { font:italic 700 26px Georgia,serif; padding:0 5px; background:#e4d3e6; border-inline:2px solid; position:relative }
+    .selection-icon::before,.selection-icon::after { content:""; width:6px; height:5px; background:var(--plum); position:absolute }
+    .selection-icon::before { left:-4px; top:-3px } .selection-icon::after { bottom:-3px; right:-4px }
+    .diff-icon { display:grid; gap:3px; transform:rotate(-5deg); font:bold 14px/14px var(--mono) }
+    .diff-icon span { width:35px; color:#72512e; border:1.4px solid currentColor; border-radius:2px; padding-left:3px; background:linear-gradient(currentColor,currentColor) 15px 50%/13px 1.5px no-repeat,#f0dcac }
+    .diff-icon span:last-child { margin-left:5px; background-color:#faefcf }
+    .book-icon { width:33px; height:28px; border:2px solid #445e4e; color:#445e4e; background:linear-gradient(90deg,transparent 42%,currentColor 42%,currentColor 48%,transparent 48%),repeating-linear-gradient(0deg,transparent 0 4px,#789382 4px 5px) 4px 5px/7px 13px no-repeat,repeating-linear-gradient(0deg,transparent 0 4px,#789382 4px 5px) 18px 5px/7px 13px no-repeat,#d7e3d6; transform:rotate(-7deg); border-radius:2px 4px 3px 2px; box-shadow:2px 3px 0 #abbfac }
+    h3 { font-size:21px; letter-spacing:-.04em; margin:0 0 7px }
+    .card h3 a:hover { text-decoration:underline }
+    .card p { color:#615a5e; font-size:14px; line-height:1.75 }
+    .demo { border-top:1px solid var(--rule) }
+    .demo-note { font-size:13px; color:var(--quiet) }
+    .editor { border:1px solid #c9c0c8; border-radius:7px; background:#fcfbf6; overflow:hidden }
+    .editor-bar,.editor-actions { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:13px 22px; background:#efeaeF; border-bottom:1px solid #d6cfd4; color:var(--plum); font:13px/1.4 var(--mono) }
+    .editor-bar .filename { font-weight:700 }
+    .editor-body { padding:28px clamp(20px,4vw,55px); font-size:17px; line-height:2; min-height:165px }
+    .editor-body h3 { margin-bottom:12px }
+    .editor-body mark { background:transparent; color:inherit; border-radius:2px; padding:2px 0; box-decoration-break:clone; -webkit-box-decoration-break:clone }
+    .editor-body.is-selected mark { background:linear-gradient(90deg,#f5d980,#f5d980) left/100% 100% no-repeat; animation:select-text .55s ease-out }
+    @keyframes select-text { from { background-size:0 100% } to { background-size:100% 100% } }
+    .editor-body ins,.editor-body del { padding:1px 3px; border-radius:2px }
+    .editor-body ins { background:#dbead9; color:#295339 }
+    .editor-body del { background:#f0dcdd; color:#774c56 }
+    .editor-actions { background:#f6f2eb; border-bottom:0; border-top:1px solid #ded7d3; min-height:64px; flex-wrap:wrap }
+    .editor-controls { display:flex; align-items:center; flex-wrap:wrap; gap:10px }
+    .plain-btn { background:transparent; padding:8px 10px; border:1px solid #ad9faa; border-radius:4px; color:var(--plum); font:600 13px var(--sans) }
+    footer { border-top:1px solid var(--rule); padding:22px 0; display:flex; justify-content:space-between; align-items:center; color:var(--quiet); font-size:13px }
+    footer strong { font:700 19px Arial,sans-serif; letter-spacing:-1px; color:var(--plum) }
+    @media(max-width:900px) {
+      .wrap { width:calc(100% - 56px) } .hero { gap:25px } h1 { font-size:clamp(43px,6vw,57px) }
+      .card { padding:18px } .lead { font-size:15px } .actions { gap:16px } .plate { aspect-ratio:1.18 }
+    }
+    @media(max-width:700px) {
+      .wrap { width:calc(100% - 36px) } .topbar { min-height:64px; gap:12px } .brand { font-size:25px; gap:6px }
+      nav { gap:12px; font-size:12px } .top-features { display:none } .button.small { padding:8px 10px; gap:6px }
+      .hero { grid-template-columns:1fr; gap:28px; padding:34px 0 28px } h1 { font-size:clamp(46px,10vw,66px); margin:14px 0 15px }
+      .lead { max-width:31em } .actions { margin-top:19px } .spec { margin-top:16px }
+      .plate { aspect-ratio:1.5 } .cards { grid-template-columns:1fr; gap:10px }
+      .card { padding:18px 18px 18px 73px } .card-symbol { position:absolute; left:18px; top:15px } h3 { font-size:19px }
+      .features,.demo { padding:27px 0 } .section-head { margin-bottom:16px; flex-wrap:wrap } .editor-body { font-size:15px }
+      .editor-bar,.editor-actions { padding:12px 15px } .editor-actions { align-items:flex-start; flex-direction:column }
+    }
+    h1 {font-size:clamp(35px,4.4vw,63px);margin:0 0 14px}
+    .connection {max-width:440px;margin-top:22px;scroll-margin-top:18px}
+    .connection #connection-status {font-size:14px;line-height:1.55;color:var(--quiet);margin:0 0 12px}
+    .connection label,.connection #saved-key span {display:block;margin:12px 0 5px;font-size:13px;font-weight:650}
+    .connection input,.connection select {width:100%;font:15px var(--sans);color:var(--ink);background:#fffcf7;border:1px solid #ad9faa;border-radius:5px;min-height:41px;padding:8px 12px}
+    .connection :is(input,select):focus-visible {outline:2px solid var(--plum);outline-offset:2px}
+    .connection .micro {font-size:12px;line-height:1.6;color:var(--quiet);margin:6px 0}
+    .connection .choices {display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:14px}
+    .link-btn {border:0;border-bottom:1px solid #a895a1;background:transparent;padding:3px 0;font-size:14px;color:var(--plum)}
+    #form-feedback:not(:empty) {margin:10px 0 0;font-size:13px;line-height:1.55;color:#883d30}
+    #key-mask {display:block;border-left:3px solid var(--yellow);padding:6px 10px;letter-spacing:.07em}
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto } *,*::before,*::after { animation:none !important; transition:none !important } }
+  </style>
+</head>
+<body id="top">
+  <header><div class="wrap topbar">
+    <a href="#top" class="brand" aria-label="DocPro 首页"><span class="mark" aria-hidden="true"></span>DocPro</a>
+    <nav aria-label="主导航">
+      <a href="#features" class="top-features">课程实践</a><a href="#start">启动指南</a>
+      <a class="button small" href="#connection">连接设置 <span class="arrow" aria-hidden="true">↗</span></a>
+    </nav>
+  </div></header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <h1 id="hero-title">欢迎使用 <span class="swash" lang="en">DocPro</span></h1>
+        <p class="lead">连接 DeepSeek，逐词审阅你的下一份稿件。</p>
+        <div id="connection" class="connection" aria-label="编辑器连接设置">
+          <p id="connection-status" role="status">双击「启动编辑器.cmd」，在本地欢迎页配置密钥。</p>
+          <a id="connect-local" class="button" href="http://127.0.0.1:4399/index.html">打开本地欢迎页 →</a>
+          <form id="connect-form" hidden>
+            <label for="writing-model">写作模型</label>
+            <select id="writing-model"><option value="deepseek-flash">DeepSeek V4.1 Flash</option></select>
+            <div id="new-key">
+              <label for="api-key">DeepSeek API Key</label>
+              <input id="api-key" type="password" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="sk-…" aria-describedby="key-hint">
+              <p id="key-hint" class="micro">密钥由本地服务校验，保存至本机的 editor/.env。</p>
+            </div>
+            <div id="saved-key" hidden><span>当前密钥</span> <code id="key-mask"></code></div>
+            <p id="form-feedback" role="status"></p>
+            <div class="choices">
+              <button class="button" id="continue" type="submit">验证并进入编辑器 →</button>
+              <button class="link-btn" id="change-key" type="button" hidden>更换密钥</button>
+              <a class="link-btn" id="offline" href="/editor/" hidden>先离线编辑</a>
+            </div>
+          </form>
+          <button class="link-btn" type="button" id="retry" hidden>重新连接</button>
+        </div>
+      </div>
+      <figure class="plate">
+        <canvas id="art" role="img" aria-label="一叠带有校对标记的手稿，一支黄铅笔正划过文中的高亮选区。"></canvas>
+        <i class="cross tl" aria-hidden="true"></i><i class="cross tr" aria-hidden="true"></i><i class="cross br" aria-hidden="true"></i>
+        <figcaption>选区手稿</figcaption>
+        <button id="replay" class="replay" aria-label="重播铅笔划选动效">↻ 重播</button>
+      </figure>
+    </section>
+    <section id="features" class="features" aria-labelledby="features-title">
+      <div class="section-head"><h2 id="features-title">三个网页实践</h2></div>
+      <div class="cards">
+        <article class="card"><div class="card-symbol" aria-hidden="true"><span class="selection-icon">Tt</span></div><h3><a href="stages/01-html/index.html">HTML · 静态首页 ↗</a></h3><p>从社区公告的两个版本，读懂选区编辑的用途。</p></article>
+        <article class="card"><div class="card-symbol" aria-hidden="true"><span class="diff-icon"><span>−</span><span>+</span></span></div><h3><a href="stages/02-css/index.html">CSS · 排版校样 ↗</a></h3><p>在同一篇文稿上切换版式，观察层级与行距。</p></article>
+        <article class="card"><div class="card-symbol" aria-hidden="true"><span class="book-icon"></span></div><h3><a href="stages/03-js/index.html">JS · 通知审阅 ↗</a></h3><p>自由输入活动通知，试试接受、拒绝和撤销。</p></article>
+      </div>
+    </section>
+    <section id="start" class="demo" aria-labelledby="start-title">
+      <div class="section-head"><h2 id="start-title">启动完整编辑器</h2></div>
+      <p class="lead">在 Windows 中双击项目里的 <code>启动编辑器.cmd</code>。启动窗口保持打开时，即可进入工作台，新建文档、导入 Word 或逐处审阅全文。</p>
+      <div class="actions"><a href="http://127.0.0.1:4399/" class="button">打开本地欢迎页 <span aria-hidden="true">→</span></a></div>
+    </section>
+  </main>
+  <footer class="wrap"><strong>DocPro</strong><a href="#top">回到顶部 ↑</a></footer>
+  <script>
+    const form = document.querySelector('#connect-form');
+    const keyInput = document.querySelector('#api-key');
+    const modelSelect = document.querySelector('#writing-model');
+    const submit = document.querySelector('#continue');
+    const changeKey = document.querySelector('#change-key');
+    const statusText = document.querySelector('#connection-status');
+    const feedback = document.querySelector('#form-feedback');
+    const retry = document.querySelector('#retry');
+    const offline = document.querySelector('#offline');
+    let savedKey = false;
+    let editing = true;
+    let busy = false;
+
+    function showMode(editKey) {
+      editing = editKey;
+      keyInput.value = '';
+      keyInput.required = editKey;
+      keyInput.disabled = !editKey;
+      document.querySelector('#new-key').hidden = !editKey;
+      document.querySelector('#saved-key').hidden = editKey;
+      changeKey.hidden = !savedKey;
+      offline.hidden = savedKey;
+      changeKey.textContent = editKey ? '取消更换' : '更换密钥';
+      submit.textContent = editKey ? '验证并进入编辑器 →' : '确认使用并进入 →';
+      feedback.textContent = '';
+    }
+    function editorUrl() {
+      const destination = new URL('/editor/', location.origin);
+      destination.searchParams.set('model', modelSelect.value);
+      return destination.href;
+    }
+    async function connect() {
+      form.hidden = true;
+      retry.hidden = true;
+      document.querySelector('#connect-local').hidden = true;
+      statusText.textContent = '正在读取本机配置…';
+      try {
+        const response = await fetch('/api/config', {cache:'no-store', signal:AbortSignal.timeout(6000)});
+        if (!response.ok) throw new Error();
+        const config = await response.json();
+        modelSelect.replaceChildren(...config.models.map(model => new Option(model.label, model.id)));
+        let previous;
+        try { previous = JSON.parse(localStorage.getItem('docpro:prefs:v1') || '{}')?.model; } catch {}
+        modelSelect.value = config.models.some(model => model.id === previous) ? previous : config.defaultModel;
+        savedKey = config.hasApiKey;
+        document.querySelector('#key-mask').textContent = '•••• ' + (config.keySuffix || '');
+        statusText.textContent = savedKey ? '欢迎回来，请确认本次使用的密钥和模型。' : '首次连接，请选择模型并填写密钥。';
+        showMode(!savedKey);
+        offline.href = editorUrl();
+        form.hidden = false;
+      } catch {
+        statusText.textContent = '无法读取本地配置。请启动 DocPro 服务，再重新连接。';
+        retry.hidden = false;
+      }
+    }
+    changeKey.addEventListener('click', () => {
+      showMode(!editing);
+      if (editing) keyInput.focus();
+    });
+    modelSelect.addEventListener('change', () => { offline.href = editorUrl(); });
+    retry.addEventListener('click', connect);
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (busy) return;
+      if (!editing) { location.assign(editorUrl()); return; }
+      const value = keyInput.value.trim();
+      if (!/^sk-[A-Za-z0-9_-]{10,}$/.test(value)) {
+        feedback.textContent = '请填写以 sk- 开头的完整 DeepSeek 密钥。';
+        keyInput.focus();
+        return;
+      }
+      busy = true;
+      submit.disabled = changeKey.disabled = modelSelect.disabled = keyInput.disabled = true;
+      offline.hidden = true;
+      feedback.textContent = '正在校验密钥…';
+      try {
+        const response = await fetch('/api/config/apikey', {method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({apiKey:value,requireVerification:true})});
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          feedback.textContent = result.code === 'verification-unavailable' ? result.error : '密钥校验失败。请检查密钥和账户状态后重试。';
+          return;
+        }
+        if (result.saved) { keyInput.value = ''; location.assign(editorUrl()); return; }
+        savedKey = true;
+        showMode(false);
+        document.querySelector('#key-mask').textContent = '•••• ' + value.slice(-4);
+        statusText.textContent = '密钥已在本次运行中生效。';
+        feedback.textContent = '无法写入本地配置，下次启动需重新填写。';
+      } catch {
+        feedback.textContent = '暂时无法连接本地服务，请稍后重试。';
+      } finally {
+        busy = false;
+        submit.disabled = changeKey.disabled = modelSelect.disabled = false;
+        keyInput.disabled = !editing;
+        offline.hidden = savedKey;
+      }
+    });
+    if (/^https?:$/.test(location.protocol)) {
+      document.querySelector('#start .button').href = '#connection';
+      connect();
+      window.addEventListener('pageshow', event => { if (event.persisted) connect(); });
+    } else if (location.protocol === 'file:') {
+      const welcomeUrl = document.querySelector('#connect-local').href;
+      fetch(new URL('/api/welcome', welcomeUrl), {credentials:'omit', signal:AbortSignal.timeout(1500)})
+        .then(response => response.ok ? response.json() : null)
+        .then(info => { if (info?.product === 'DocPro') location.replace(welcomeUrl); })
+        .catch(() => {});
+    }
+    const canvas = document.querySelector('#art');
+    const ctx = canvas.getContext('2d');
+    const ink = '#453044';
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
+    let progress = 1;
+
+    function shape(points, fill, edge = ink, width = 2) {
+      ctx.beginPath();
+      ctx.moveTo(...points[0]);
+      for (const point of points.slice(1)) ctx.lineTo(...point);
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (edge) { ctx.strokeStyle = edge; ctx.lineWidth = width; ctx.stroke(); }
+    }
+    function line(x1, y1, x2, y2, color = ink, width = 1.5) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+    function sheet(x, y, angle, color) {
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(angle);
+      const corners = [[-125,-139],[126,-141],[129,143],[-126,141]];
+      shape(corners, color);
+      ctx.clip();
+      for (let i = -160; i < 145; i += 5) line(-146,i,-81,i+55,'#8a7388',.7);
+      for (let i = -135; i < 120; i += 4) line(i,151,i+17,131,'#8a7388',.7);
+      ctx.restore();
+    }
+    function page() {
+      const corners = [[-126,-145],[91,-145],[128,-108],[128,143],[-126,143]];
+      shape(corners,'#fffaf0',ink,2.4);
+      ctx.save();
+      ctx.clip();
+      // Small flecks are fixed to the sheet while the pencil moves.
+      let seed = 41;
+      function random() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+      ctx.fillStyle = '#66504c35';
+      for (let i = 0; i < 480; i++) ctx.fillRect(random()*260-130,random()*294-147,random()+.3,.7);
+      ctx.restore();
+      shape([[91,-145],[128,-108],[91,-109]],'#ddcddc');
+      line(96,-133,116,-112,'#967e94',.8);
+      line(-98,-118,65,-118,'#786674',1);
+      ctx.fillStyle = '#493149';
+      ctx.font = 'italic bold 67px Georgia, serif';
+      ctx.fillText('Aa',-99,-53);
+      line(-96,-33,88,-33,ink,3.2);
+      line(-96,-20,50,-20,'#756272',2.5);
+      line(57,-20,88,-20,'#756272',2.5);
+      line(-96,-7,35,-7,'#756272',2.5);
+      const start = -96;
+      const end = start + 175*progress;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(start-5,12,end-start+5,33);
+      ctx.clip();
+      shape([[-101,14],[79,12],[82,37],[-98,41]],'#f3c34f',null);
+      ctx.restore();
+      ctx.font = 'italic 22px Georgia, serif';
+      ctx.fillText('Selected text',-93,33);
+      line(-99,13,-99,42,'#78582c',1.6);
+      line(-102,13,-95,13,'#78582c',1.6);
+      line(-102,42,-95,42,'#78582c',1.6);
+      line(-96,60,89,60,'#786875',2.4);
+      line(-96,74,64,74,'#786875',2.4);
+      line(-96,88,29,88,'#786875',2.4);
+      line(-98,117,96,117,'#a994a2',1);
+      ctx.font = '10px Consolas, monospace';
+      ctx.fillStyle = '#7c6978';
+      ctx.fillText('DRAFT.md',-96,131);
+      // Bent wire paper clip, drawn twice for the light along the metal.
+      ctx.save();
+      ctx.translate(-64,-147);
+      ctx.rotate(-.13);
+      ctx.beginPath();
+      ctx.moveTo(-3,-1);
+      ctx.lineTo(-3,-9);
+      ctx.bezierCurveTo(-3,-21,14,-21,14,-9);
+      ctx.lineTo(14,23);
+      ctx.bezierCurveTo(14,35,0,35,0,24);
+      ctx.lineTo(0,4);
+      ctx.bezierCurveTo(0,-2,8,-3,8,4);
+      ctx.lineTo(8,22);
+      ctx.strokeStyle = ink; ctx.lineWidth = 4; ctx.stroke();
+      ctx.strokeStyle = '#d3c6d1'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+    }
+    function pencil() {
+      ctx.save();
+      ctx.translate(-81 + 164*progress,41);
+      ctx.rotate(-.72);
+      const silhouette = [[0,0],[30,-10],[197,-10],[201,-7],[201,7],[197,10],[30,10]];
+      ctx.save();
+      ctx.translate(-2,6);
+      shape(silhouette,'#49344844',null);
+      ctx.restore();
+      shape(silhouette,'#f4c443',ink,2.5);
+      shape([[27,-8],[177,-8],[177,-3],[32,-2]],'#ffe396',null);
+      shape([[30,4],[177,4],[177,9],[30,9]],'#cd8d2c',null);
+      line(31,3,177,3,'#7d552e',1);
+      shape([[0,0],[29,-10],[33,-5],[29,0],[33,5],[29,10]],'#dcad7f',ink,1.4);
+      shape([[0,0],[10,-3.6],[11,3.6]],ink,ink,1);
+      shape([[177,-10],[188,-10],[188,10],[177,10]],'#ded2cd',ink,1.5);
+      line(181,-8,181,8,'#806c77',1);
+      shape([[188,-10],[197,-10],[201,-7],[201,7],[197,10],[188,10]],'#a6809c',ink,1.6);
+      ctx.font = 'bold 7px Consolas, monospace';
+      ctx.fillStyle = ink;
+      ctx.fillText('DOCPRO   •   HB',75,1.4);
+      ctx.restore();
+    }
+    function paint() {
+      const {width,height} = canvas.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const pixelWidth = Math.round(width*ratio);
+      const pixelHeight = Math.round(height*ratio);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth; canvas.height = pixelHeight;
+      }
+      const scale = Math.min(width/560,height/388);
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      ctx.clearRect(0,0,width,height);
+      ctx.translate(width/2,height/2);
+      ctx.scale(scale,scale);
+      ctx.translate(-10,2);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      // Offset hatch shadow gives the layers the look of an ink print.
+      ctx.save();
+      ctx.translate(10,12);
+      ctx.rotate(.085);
+      shape([[-126,-140],[132,-140],[132,144],[-126,144]],'#b9a6ba',null);
+      ctx.clip();
+      for (let i=-400;i<350;i+=3.4) line(i,150,i+210,-150,'#766079',1);
+      ctx.restore();
+      sheet(3,4,.10,'#d4c2d3');
+      sheet(-4,1,-.015,'#e6dae0');
+      ctx.save();
+      ctx.rotate(-.12);
+      page();
+      pencil();
+      ctx.restore();
+    }
+    function play() {
+      cancelAnimationFrame(frame);
+      if (motion.matches) { progress = 1; paint(); return; }
+      const start = performance.now();
+      function drawAt(now) {
+        const time = Math.min(1, Math.max(0,(now-start)/1450));
+        progress = time*time*(3-2*time);
+        paint();
+        if (time < 1) frame = requestAnimationFrame(drawAt);
+      }
+      frame = requestAnimationFrame(drawAt);
+    }
+    new ResizeObserver(paint).observe(canvas);
+    document.querySelector('#replay').addEventListener('click',play);
+    motion.addEventListener('change',play);
+    play();
+  </script>
+</body>
+</html>

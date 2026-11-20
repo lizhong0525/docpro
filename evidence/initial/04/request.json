@@ -1,0 +1,23 @@
+{
+  "requestId": "course-offline-check",
+  "docRev": 1,
+  "docTitle": "居民活动",
+  "docText": "居民可以进行报名。",
+  "ranges": [
+    {
+      "index": 0,
+      "from": 0,
+      "to": 9,
+      "anchor": 0,
+      "head": 9,
+      "text": "居民可以进行报名。",
+      "hash": "6d75a0c0",
+      "before": "",
+      "after": ""
+    }
+  ],
+  "instruction": "精简",
+  "options": {
+    "mode": "rewrite"
+  }
+}

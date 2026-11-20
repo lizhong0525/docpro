@@ -1,0 +1,59 @@
+:root {
+  --paper: #f7f4ec;
+  --ink: #38283a;
+  --plum: #583752;
+  --mute: #665f64;
+  --line: #cfc6c8;
+  --gold: #f3cd71;
+  font-family: "Inter", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+* { box-sizing: border-box }
+body { margin: 0 }
+.frame { width: min(1100px, calc(100% - 64px)); margin: 0 auto }
+.masthead { border-bottom: 1px solid var(--line) }
+.masthead .frame { display: flex; align-items: center; gap: 16px; min-height: 66px }
+.masthead b { font: 800 27px/1 Arial, sans-serif; letter-spacing: -.07em }
+.masthead span { padding-left: 16px; border-left: 1px solid #b9aeb5; font-size: 14px; color: var(--mute) }
+.intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 43px 0 29px }
+.file { display: inline-block; margin: 0; color: var(--plum); border-bottom: 3px solid var(--gold); font: 13px/1.8 "IBM Plex Mono", Consolas, monospace }
+h1 { margin: 10px 0 0; font-size: clamp(38px, 5.5vw, 70px); line-height: 1.18; letter-spacing: -.065em }
+.intro > p { max-width: 28em; color: var(--mute); line-height: 1.8; margin: 0 0 3px; font-size: 15px }
+.bench { min-inline-size: 0; margin: 0 0 50px; padding: 15px 0 0; border: 0; border-top: 1px solid var(--line) }
+legend { padding: 0 13px 0 0; color: var(--mute); font-size: 13px }
+.bench > input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden }
+.bench > label { display: inline-block; margin-right: 6px; border: 1px solid #a99aa6; border-radius: 30px; padding: 8px 18px; cursor: pointer; font-size: 14px }
+.bench > input:checked + label { background: var(--plum); color: white; border-color: var(--plum) }
+.bench > input:focus-visible + label { outline: 3px solid #9a6614; outline-offset: 3px }
+.sheets { display: grid; grid-template-columns: minmax(0, .87fr) minmax(0, 1.13fr); gap: 18px; margin-top: 20px }
+.sheets > section { min-width: 0; border: 1px solid #cbbfc8; border-radius: 4px; overflow: hidden }
+.sheets h2 { font-size: 14px; border-bottom: 1px solid #cbbfc8; margin: 0; padding: 12px 20px }
+.source { background: #efebf1 }
+.source h2 { background: #e6dfe8 }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 22px; color: #574b58; font: 15px/1.86 "IBM Plex Mono", Consolas, "Microsoft YaHei", monospace }
+.proof { background: #fffdf6 }
+.proof h2 { background: #f5eaca }
+.letter { padding: 25px clamp(22px, 3vw, 46px) 28px; font-family: "STIX Two Text", "SimSun", serif; line-height: 1.98 }
+.letter h3 { font-size: clamp(26px, 3vw, 38px); line-height: 1.32; margin: 0 0 16px; letter-spacing: -.04em }
+.letter h4 { margin: 18px 0 5px; font-size: 18px }
+.letter p { font-size: 16px; margin: 0; text-indent: 2em }
+.guide { margin: 17px 0 0; line-height: 1.7; font-size: 14px; color: var(--mute) }
+.exhibit-note { display: none }
+#exhibit:checked ~ .journal-note { display: none }
+#exhibit:checked ~ .exhibit-note { display: block }
+#exhibit:checked ~ .sheets .letter { font-family: "Inter", "Microsoft YaHei", sans-serif; animation: reveal .34s ease-out }
+#exhibit:checked ~ .sheets h3 { font-size: clamp(31px, 3.7vw, 47px); font-weight: 900; color: var(--plum) }
+#exhibit:checked ~ .sheets h4 { padding-left: .55em; border-left: 5px solid var(--gold) }
+#exhibit:checked ~ .sheets .letter p { max-width: 24em; text-indent: 0; line-height: 1.7 }
+@keyframes reveal { from { transform: translateY(5px); opacity: .65 } to { transform: none; opacity: 1 } }
+@media (max-width: 720px) {
+  .frame { width: calc(100% - 32px) }
+  .intro { display: block; margin: 26px 0 20px }
+  .intro > p { margin-top: 12px }
+  .sheets { grid-template-columns: 1fr }
+  .letter, pre { padding: 20px }
+}
+@media (prefers-reduced-motion: reduce) {
+  #exhibit:checked ~ .sheets .letter { animation: none }
+}

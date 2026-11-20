@@ -1,0 +1,21 @@
+# ---- 本地运行时二进制：单文件 88 MB，接近 GitHub 100 MB 硬上限 ----
+# 需要免安装启动时请自行放置，或安装 Node.js 22+ 后运行
+#   node editor/runtime/server.mjs --prod
+/runtime/
+
+# ---- 提交打包产物：与 reports、stages 重复 ----
+/提交包/
+
+# ---- 浏览器证据目录中的用户配置 ----
+# 内含 Login Data / History / Web Data / Cache，属于本机隐私数据
+/evidence/work/browser/
+
+# ---- Python 缓存 ----
+__pycache__/
+*.pyc
+
+# ---- 系统与编辑器杂项 ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log

@@ -1,0 +1,4 @@
+allowBuilds:
+  esbuild: true
+storeDir: .build-cache/store
+cacheDir: .build-cache/cache

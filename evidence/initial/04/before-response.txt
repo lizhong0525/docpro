@@ -1,0 +1,2 @@
+503
+{"code":"missing-api-key","error":"服务端未配置 DEEPSEEK_API_KEY，请在项目根目录的 .env 中填写后重启服务。"}

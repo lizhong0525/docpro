@@ -1,0 +1,428 @@
+/**
+ * DocPro E2E（阶段 3）：真实浏览器 + 真实 DocPro 服务 + 真实 DeepSeek。
+ *
+ * 运行前提：http://127.0.0.1:4399 上 DocPro dev server 已启动且 API Key 已配置。
+ * 运行：node node_modules/@playwright/test/cli.js test
+ *
+ * 覆盖：
+ *  - 页面加载 / 健康状态 / 编辑器可用
+ *  - 键盘输入文档 + 三击选行 + Ctrl+K 指令条 + 真实提交 + 等待审阅
+ *  - 接受 → 文档变化；Ctrl+Z → 完整恢复（单一 undo 步）
+ *  - 拒绝 → 文档不变
+ *  - 空选区插入
+ *  - 预览切换
+ *  - 状态栏选区识别信息
+ *  - 窄屏布局截图
+ * 截图统一保存到 .artifacts/e2e-*.png。
+ */
+import { expect, test, type Page } from '@playwright/test';
+
+const SHOT_DIR = '.artifacts';
+
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+/** 读取 CodeMirror 编辑器中当前可见行的文本（E2E 文档都短，全部可见） */
+async function readEditor(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const root = document.querySelector('[data-testid="editor"]');
+    if (!root) return '';
+    const lines = Array.from(root.querySelectorAll('.cm-line')).map((line) => line.textContent ?? '');
+    return lines.join('\n');
+  });
+}
+
+/** 聚焦编辑器、全选并插入整篇文档 */
+async function setDocument(page: Page, doc: string): Promise<void> {
+  const editor = page.locator('[data-testid="editor"]');
+  await editor.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.insertText(doc);
+  await expect(page.locator('[data-testid="doc-title"]')).toBeVisible();
+}
+
+/** 三击选中第 index 行（CodeMirror 原生行选择） */
+async function selectLine(page: Page, index = 0): Promise<void> {
+  const line = page.locator('.cm-line').nth(index);
+  await expect(line).toBeVisible();
+  await line.click({ clickCount: 3 });
+  // 确认选区已生效（状态栏不再是“空白”光标状态）
+  await expect(page.locator('[data-testid="selection-status"]')).not.toContainText('空白');
+}
+
+/** 打开指令条（Ctrl+K）。注意：不能先点击编辑器，否则三击选区会被折叠成光标 */
+async function openCommandBar(page: Page): Promise<void> {
+  await page.keyboard.press('Control+k');
+  await expect(page.locator('[data-testid="command-bar"]')).toBeVisible();
+}
+
+/** 填写指令并真实提交 */
+async function submitInstruction(page: Page, instruction: string): Promise<void> {
+  const input = page.locator('[data-testid="command-input"]');
+  await input.fill(instruction);
+  await expect(page.locator('[data-testid="command-submit"]')).toBeEnabled();
+  await page.locator('[data-testid="command-submit"]').click();
+}
+
+/** 等待审阅面板出现（不要求可接受：no-change / error 场景也可用） */
+async function waitForReview(page: Page): Promise<void> {
+  await expect(page.locator('[data-testid="review-panel"]')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('[data-testid="proposal-card"]')).toBeVisible({ timeout: 60_000 });
+}
+
+/** 等待审阅面板出现且提案可接受（真实模型 1-3s，留足余量） */
+async function waitForProposal(page: Page): Promise<void> {
+  await waitForReview(page);
+  await expect(page.locator('[data-testid="accept"]')).toBeEnabled({ timeout: 60_000 });
+}
+
+async function waitReviewClosed(page: Page): Promise<void> {
+  await expect(page.locator('[data-testid="review-panel"]')).toHaveCount(0, { timeout: 20_000 });
+}
+
+/** 让焦点回到编辑器，确保 Ctrl+Z 由 CodeMirror 处理 */
+async function focusEditor(page: Page): Promise<void> {
+  await page.locator('[data-testid="editor"]').click();
+}
+
+/** 明显需要润色的第一行（避免模型判定“无需修改”） */
+const FIRST_LINE =
+  '这个功能目前有一个问题，就是当用户点击按钮以后页面会一直卡住不动，我们需要尽快修复它，否则会影响用户体验。';
+const TEST_DOC = `${FIRST_LINE}\n\n第二段内容保持不变。\n`;
+const POLISH_INSTRUCTION = '把这句话改得更简洁、更专业，保留原意，不要改变它在段落中的位置。';
+
+/* ------------------------------------------------------------------ */
+/* tests                                                               */
+/* ------------------------------------------------------------------ */
+
+test.describe('DocPro 基础加载', () => {
+  test('页面加载、服务健康、编辑器可用', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
+    await page.goto('/editor/');
+    await expect(page.locator('.brand-name')).toHaveText('DocPro');
+    await expect(page.locator('[data-testid="health"]')).toHaveText(/DeepSeek 就绪|本地规则模式/, { timeout: 20_000 });
+    await expect(page.locator('[data-testid="editor"]')).toBeVisible();
+    await expect(page.locator('[data-testid="selection-status"]')).toBeVisible();
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-load-desktop.png`, fullPage: true });
+
+    // 输入文档：字数统计应更新
+    await setDocument(page, TEST_DOC);
+    await expect(page.locator('.doc-meta')).toContainText('行');
+    expect(await readEditor(page)).toContain(FIRST_LINE);
+
+    // favicon 404 等资源错误不应出现
+    const resourceErrors = consoleErrors.filter((text) => /404|Failed to load resource/i.test(text));
+    expect(resourceErrors, `页面控制台资源错误：${resourceErrors.join(' | ')}`).toEqual([]);
+  });
+
+  test('预览切换（按钮 / 渲染内容）', async ({ page }) => {
+    await page.goto('/editor/');
+    await setDocument(page, '# 预览标题\n\n预览正文内容。\n');
+
+    await page.locator('[data-testid="toggle-preview"]').click();
+    await expect(page.locator('[data-testid="preview-pane"]')).toBeVisible();
+    await expect(page.locator('[data-testid="preview"] h1')).toHaveText('预览标题');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-preview.png`, fullPage: true });
+
+    await page.locator('[data-testid="back-to-edit"]').click();
+    await expect(page.locator('[data-testid="preview-pane"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="editor"]')).toBeVisible();
+  });
+});
+
+test.describe('选区识别状态栏', () => {
+  test('选中整行后显示字符数、块类型与识别详情', async ({ page }) => {
+    await page.goto('/editor/');
+    await setDocument(page, TEST_DOC);
+    await selectLine(page, 0);
+
+    const status = page.locator('[data-testid="selection-status"]');
+    await expect(status).toContainText('字');
+    await expect(status).toContainText('段落');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-selection-status.png` });
+
+    const toggle = page.locator('[data-testid="toggle-selection-detail"]');
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(page.locator('[data-testid="selection-detail"]')).toBeVisible();
+    // 识别详情应展示块类型与位置等确定性信息
+    await expect(page.locator('[data-testid="selection-detail"]')).toContainText('段落');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-selection-detail.png` });
+  });
+});
+
+test.describe('真实 AI 修改：接受 / 撤销 / 拒绝', () => {
+  test('接受修改 → 文本变化 → Ctrl+Z 完整恢复', async ({ page }) => {
+    await page.goto('/editor/');
+    await setDocument(page, TEST_DOC);
+    const before = await readEditor(page);
+    expect(before).toContain(FIRST_LINE);
+
+    await selectLine(page, 0);
+    await openCommandBar(page);
+    await submitInstruction(page, POLISH_INSTRUCTION);
+    await waitForProposal(page);
+
+    // 审阅面板应展示 before/after 词级 diff 与提案信息
+    await expect(page.locator('[data-testid="diff"]')).toBeVisible();
+    await expect(page.locator('[data-testid="proposal-card"]')).toContainText('词级差异');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-review.png` });
+
+    await page.locator('[data-testid="accept"]').click();
+    await waitReviewClosed(page);
+
+    const after = await readEditor(page);
+    expect(after).not.toBe(before);
+    expect(after.length).toBeGreaterThan(0);
+    // 选区之外的内容必须保持：第二段原文与结尾换行逐字不变
+    expect(after).toContain('第二段内容保持不变。');
+    expect(after.trimEnd().endsWith('第二段内容保持不变。')).toBe(true);
+    expect(after.endsWith('\n')).toBe(true);
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-accepted.png` });
+
+    // 单步 undo 恢复原文
+    await focusEditor(page);
+    await page.keyboard.press('Control+z');
+    await expect.poll(async () => readEditor(page), { timeout: 10_000 }).toBe(before);
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-undo-restored.png` });
+  });
+
+  test('拒绝修改 → 文档不变', async ({ page }) => {
+    await page.goto('/editor/');
+    await setDocument(page, TEST_DOC);
+    const before = await readEditor(page);
+
+    await selectLine(page, 0);
+    await openCommandBar(page);
+    await submitInstruction(page, '把这句话改得更口语化、更简短一些。');
+    await waitForReview(page);
+
+    await expect(page.locator('[data-testid="reject"]')).toBeEnabled();
+    await page.locator('[data-testid="reject"]').click();
+    await waitReviewClosed(page);
+
+    expect(await readEditor(page)).toBe(before);
+  });
+});
+
+test.describe('空选区插入', () => {
+  test('光标处插入文字并被接受 → 文档变长 → Ctrl+Z 恢复', async ({ page }) => {
+    await page.goto('/editor/');
+    await setDocument(page, TEST_DOC);
+    const before = await readEditor(page);
+
+    // 光标移动到文档末尾，Ctrl+K 打开插入模式
+    await page.locator('[data-testid="editor"]').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.press('Control+k');
+    await expect(page.locator('[data-testid="command-bar"]')).toContainText('在光标处插入');
+    await submitInstruction(page, '在这里插入一句：这是新增的一句话。');
+    await waitForProposal(page);
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-insert-review.png` });
+
+    await page.locator('[data-testid="accept"]').click();
+    await waitReviewClosed(page);
+
+    const after = await readEditor(page);
+    expect(after.length).toBeGreaterThan(before.length);
+    expect(after).toContain('第二段内容保持不变。');
+    // 原文前缀保持（选区外零改动）
+    expect(after.startsWith(before.replace(/\n$/, ''))).toBe(true);
+
+    await focusEditor(page);
+    await page.keyboard.press('Control+z');
+    await expect.poll(async () => readEditor(page), { timeout: 10_000 }).toBe(before);
+  });
+});
+
+test.describe('系统提示词模式', () => {
+  test('结构重写模式：指令可留空，提交后得到提案并可应用', async ({ page }) => {
+    const doc = '我们计划开发一个（），用于提升团队效率，目标是在（）上线。\n\n第二段保持不变。\n';
+    await page.goto('/editor/');
+    await setDocument(page, doc);
+    const before = await readEditor(page);
+
+    await selectLine(page, 0);
+    await openCommandBar(page);
+    await page.locator('[data-testid="select-preset"]').selectOption('structure-fill');
+    await expect(page.locator('[data-testid="preset-hint"]')).toContainText('结构重写');
+    // 已选非默认提示词模式：指令留空也应允许提交（使用模式默认指令）
+    await expect(page.locator('[data-testid="command-input"]')).toHaveValue('');
+    await expect(page.locator('[data-testid="command-submit"]')).toBeEnabled();
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-preset-structure.png` });
+
+    await page.locator('[data-testid="command-submit"]').click();
+    await waitForProposal(page);
+    await page.locator('[data-testid="accept"]').click();
+    await waitReviewClosed(page);
+
+    const after = await readEditor(page);
+    expect(after).not.toBe(before);
+    expect(after.length).toBeGreaterThan(0);
+    // 选区之外零改动
+    expect(after).toContain('第二段保持不变。');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-preset-applied.png` });
+  });
+});
+
+test.describe('文档库与审阅留痕', () => {
+  test('新建文档 → 自动保存 → AI 接受 → 留痕与版本对比 → 回滚', async ({ page }) => {
+    await page.goto('/editor/');
+    await expect(page.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 20_000 });
+    const title = `E2E 文档 ${Date.now()}`;
+
+    // 通过文档库新建带标题的文档
+    await page.locator('[data-testid="open-library"]').click();
+    await expect(page.locator('[data-testid="doc-library"]')).toBeVisible();
+    await expect(page.locator('[data-testid="docs-root"]')).toContainText('docs');
+    await page.locator('[data-testid="new-doc-title"]').fill(title);
+    await page.locator('[data-testid="new-doc"]').click();
+    await expect(page.locator('[data-testid="doc-library"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="doc-title"]')).toHaveValue(title);
+
+    // 编辑内容 → 自动保存到文档库（产生版本与留痕）
+    await setDocument(
+      page,
+      '这个功能目前有一个问题，就是当用户点击按钮以后页面会一直卡住不动，我们需要尽快修复它。\n\n第二段保持不变。\n',
+    );
+    await expect(page.locator('[data-testid="doc-sync"]')).toContainText('已同步', { timeout: 30_000 });
+    await expect(page.locator('[data-testid="file-meta"]')).toContainText('留痕已开启');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-doc-library-saved.png` });
+
+    // 真实 AI 修改，接受后写入留痕
+    await selectLine(page, 0);
+    await openCommandBar(page);
+    await submitInstruction(page, POLISH_INSTRUCTION);
+    await waitForProposal(page);
+    await page.locator('[data-testid="accept"]').click();
+    await waitReviewClosed(page);
+    await expect(page.locator('[data-testid="doc-sync"]')).toContainText('已同步', { timeout: 30_000 });
+
+    // 打开审阅 / 留痕面板
+    await page.locator('[data-testid="open-history"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="audit-ai-proposal"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid="audit-ai-accepted"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid="audit-doc-saved"]').first()).toBeVisible();
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-history-timeline.png` });
+
+    // 展开 AI 接受事件 → 查看版本对比
+    await page.locator('[data-testid="audit-ai-accepted"]').first().locator('.audit-summary').click();
+    const diffButton = page.locator('[data-testid^="audit-diff-"]').first();
+    await expect(diffButton).toBeVisible();
+    await diffButton.click();
+    await expect(page.locator('[data-testid="history-diff"]')).toBeVisible({ timeout: 20_000 });
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-history-diff.png` });
+
+    // 展开一个保存事件 → 回滚到版本 2（AI 修改前）
+    await page.locator('[data-testid="audit-doc-saved"]').first().locator('.audit-summary').click();
+    const restoreButton = page.locator('[data-testid="audit-restore-2"]');
+    if ((await restoreButton.count()) > 0) {
+      page.once('dialog', (dialog) => void dialog.accept());
+      await restoreButton.click();
+      await expect(page.locator('[data-testid="toast"]')).toContainText('已回滚', { timeout: 20_000 });
+    }
+
+    // 文档库：子文件夹路径、列表包含该文档
+    await page.locator('[aria-label="关闭审阅面板"]').click();
+    await page.locator('[data-testid="open-library"]').click();
+    await expect(page.locator('[data-testid="doc-library"]')).toBeVisible();
+    await expect(page.locator('[data-testid="doc-list"]')).toContainText(title);
+    await expect(page.locator('[data-testid="docs-root"]')).toContainText('docs');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-doc-library.png` });
+
+    // 新建第二个文档并切回第一个，验证文件管理
+    const secondTitle = `${title} · 二`;
+    await page.locator('[data-testid="new-doc-title"]').fill(secondTitle);
+    await page.locator('[data-testid="new-doc"]').click();
+    await expect(page.locator('[data-testid="doc-title"]')).toHaveValue(secondTitle);
+    await page.locator('[data-testid="open-library"]').click();
+    await expect(page.locator('[data-testid="doc-list"]')).toContainText(secondTitle);
+    await expect(page.locator('[data-testid="doc-list"]')).toContainText(title);
+    await page.locator('.lib-doc-title').filter({ hasText: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }).click();
+    await expect(page.locator('[data-testid="doc-title"]')).toHaveValue(title);
+  });
+});
+
+test.describe('全文修改 · 审查审批可视化', () => {
+  test('全文修改 → 逐处批准/拒绝 → 只应用批准部分并留痕', async ({ page }) => {
+    const doc = [
+      '# 项目周报',
+      '',
+      '本周完成了登录模块和支付模块的开发，修复了三个阻塞问题。',
+      '',
+      '下周计划开始性能优化和移动端适配。',
+      '',
+      '风险：第三方接口稳定性差，需要增加重试和监控。',
+      '',
+    ].join('\n');
+    await page.goto('/editor/');
+    await setDocument(page, doc);
+    await expect(page.locator('[data-testid="full-doc-edit"]')).toBeVisible();
+    await page.locator('[data-testid="full-doc-edit"]').click();
+    await expect(page.locator('[data-testid="command-bar"]')).toBeVisible();
+    await expect(page.locator('[data-testid="full-doc-note"]')).toBeVisible();
+    await expect(page.locator('[data-testid="command-bar"]')).toContainText('全文修改');
+    await page.locator('[data-testid="command-input"]').fill('把全文改写得更正式、结构更清楚，保留全部信息。');
+    await page.locator('[data-testid="command-submit"]').click();
+
+    // 全文审查面板自动打开
+    await expect(page.locator('[data-testid="full-review"]')).toBeVisible({ timeout: 90_000 });
+    const hunks = page.locator('.review-hunk');
+    await expect(hunks.first()).toBeVisible({ timeout: 20_000 });
+    const total = await hunks.count();
+    expect(total).toBeGreaterThan(0);
+    await expect(page.locator('[data-testid="review-apply"]')).toBeDisabled();
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-full-review-pending.png` });
+
+    // 全部批准：每处应显示已批准状态，进度更新
+    await page.locator('[data-testid="review-approve-all"]').click();
+    await expect(page.locator('.review-hunk-approved')).toHaveCount(total);
+    await expect(page.locator('[data-testid="review-apply"]')).toBeEnabled();
+
+    // 拒绝其中一处，验证“部分批准”的审批可视化与最终应用
+    const rejectIndex = total >= 2 ? 2 : 1;
+    await page.locator(`[data-testid="review-reject-${rejectIndex}"]`).click();
+    await expect(page.locator('.review-hunk-rejected')).toHaveCount(1);
+    await expect(page.locator('.review-hunk-approved')).toHaveCount(total - 1);
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-full-review-decisions.png` });
+
+    await page.locator('[data-testid="review-apply"]').click();
+    await expect(page.locator('[data-testid="full-review"]')).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.locator('[data-testid="toast"]')).toContainText('已应用', { timeout: 10_000 });
+
+    // 内容被部分应用；留痕中有全文审查通过事件
+    await expect(page.locator('[data-testid="doc-sync"]')).toContainText('已同步', { timeout: 30_000 });
+    const after = await readEditor(page);
+    expect(after).not.toBe(doc);
+    expect(after.length).toBeGreaterThan(0);
+    await page.locator('[data-testid="open-history"]').click();
+    await expect(page.locator('[data-testid="history-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="audit-review-approved"]').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="audit-review-approved"]').first()).toContainText('全文审查通过');
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-full-review-history.png` });
+  });
+});
+
+test.describe('响应式布局', () => {
+  test('窄屏下指令条可用且截图留档', async ({ page }) => {
+    await page.setViewportSize({ width: 520, height: 900 });
+    await page.goto('/editor/');
+    await setDocument(page, TEST_DOC);
+    await selectLine(page, 0);
+    await openCommandBar(page);
+    await expect(page.locator('[data-testid="command-input"]')).toBeVisible();
+    const box = await page.locator('[data-testid="command-bar"]').boundingBox();
+    expect(box).not.toBeNull();
+    // 指令条在窄屏下应基本占满宽度（不要求像素精确）
+    expect(box!.width).toBeGreaterThan(460);
+    await page.screenshot({ path: `${SHOT_DIR}/e2e-narrow-command.png` });
+    await page.locator('[data-testid="command-cancel"]').click();
+    await expect(page.locator('[data-testid="command-bar"]')).toHaveCount(0);
+  });
+});

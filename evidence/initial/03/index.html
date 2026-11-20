@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>居民活动通知 · DocPro 选区审阅</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="review.js" defer></script>
+</head>
+<body>
+  <header><div class="wrap brand"><b lang="en">DocPro</b><span>选区审阅练习</span></div></header>
+  <main class="wrap">
+    <div class="intro"><p class="file">社区活动 / 通知草稿</p><h1>选一句，改一句。</h1><p>在稿件里选中文字，试用本地规则精简措辞或整理空格，再决定是否接受。</p></div>
+    <div class="workbench">
+      <section class="panel write">
+        <div class="bar"><h2><label for="draft">居民活动通知</label></h2><span>原稿</span></div>
+        <textarea id="draft" aria-describedby="selection-help" spellcheck="false">周日 9:30，居民活动室开放旧物修补角。
+
+有意参加的居民请提前进行报名，方便志愿者进行登记。请携带需要进行修补的布袋或衣物。
+
+现场备有针线，首次参加也可以向志愿者求助。</textarea>
+        <p class="hint" id="selection-help">可自由改稿。初次体验时可直接选中含“进行报名”的段落。</p>
+        <div class="tools">
+          <label for="rule">修改规则</label>
+          <select id="rule"><option value="concise">精简措辞</option><option value="spacing">整理连续空格</option></select>
+          <button id="generate" class="primary">生成建议</button>
+        </div>
+      </section>
+      <section class="panel review" aria-labelledby="review-heading">
+        <div class="bar"><h2 id="review-heading">对照审阅</h2><span>修改建议</span></div>
+        <div class="review-body">
+          <p class="legend"><del>删除</del> <ins>新增</ins></p>
+          <p id="diff" class="difference">生成建议后，在这里逐处对照选中文字。</p>
+          <div class="decisions"><button id="accept" class="primary" disabled>接受修改</button><button id="reject" disabled>保留原文</button></div>
+        </div>
+      </section>
+    </div>
+    <div class="statusbar"><p id="message" role="status">稿件已就绪。</p><button id="undo" disabled>撤销上次接受</button></div>
+    <details><summary>查看本地规则</summary><p>精简措辞将“有意参加的居民”“进行报名”“进行登记”“进行修补”分别改为“居民”“报名”“登记”“修补”。整理空格会把每组连续的半角空格替换成一个。建议仅在本页生成。</p></details>
+  </main>
+</body>
+</html>

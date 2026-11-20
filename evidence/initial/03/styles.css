@@ -1,0 +1,38 @@
+:root { --paper:#f7f4ec; --ink:#38283a; --plum:#583752; --muted:#655e63; --border:#cfc3cc; --gold:#f3cd71; background:var(--paper); color:var(--ink); font-family:"Inter","Microsoft YaHei","PingFang SC",sans-serif }
+* { box-sizing:border-box }
+body,h1,h2,p { margin:0 }
+.wrap { width:min(1100px,calc(100% - 64px)); margin-inline:auto }
+header { border-bottom:1px solid var(--border) }
+.brand { min-height:66px; display:flex; align-items:center; gap:16px }
+.brand b { font:800 27px/1 Arial,sans-serif; letter-spacing:-.07em }
+.brand span { border-left:1px solid #b9aeb5; padding-left:16px; font-size:14px; color:var(--muted) }
+.intro { margin:37px 0 24px }
+.file { display:inline-block; border-bottom:3px solid var(--gold); color:var(--plum); font-size:13px }
+h1 { font-size:clamp(38px,5vw,64px); line-height:1.2; letter-spacing:-.065em; margin:11px 0 }
+.intro > p:last-child,.hint,details p { color:var(--muted); line-height:1.75; font-size:15px }
+.workbench { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:16px }
+.panel { min-width:0; border:1px solid var(--border); border-radius:5px; overflow:hidden; background:#fffcf6 }
+.bar { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:12px 18px; background:#ebe4ed; border-bottom:1px solid var(--border) }
+.review .bar { background:#f5eaca }
+h2 { font-size:18px; letter-spacing:-.025em }
+.bar span { font-size:12px; color:var(--muted) }
+textarea { display:block; margin:17px auto 5px; width:calc(100% - 36px); height:205px; min-height:135px; resize:vertical; border:1px solid #d7cdd4; padding:11px 13px; border-radius:3px; background:#fffdf8; font:16px/1.8 "Microsoft YaHei",sans-serif; color:var(--ink) }
+::selection { background:#f4d47c; color:#38283a }
+.hint { margin-inline:18px; font-size:13px }
+.tools,.decisions,.statusbar { display:flex; flex-wrap:wrap; align-items:center; gap:9px }
+.tools { padding:15px 18px 17px }
+.tools label { font-size:13px }
+button,select { color:var(--ink); background:#fffaf1; border:1px solid #a694a1; border-radius:4px; padding:8px 12px; font:600 14px/1.4 "Inter","Microsoft YaHei",sans-serif }
+button:not(:disabled),select,summary { cursor:pointer }
+button.primary { color:white; background:var(--plum); border-color:var(--plum) }
+button:disabled { opacity:.45 }
+:focus-visible { outline:3px solid #a36615; outline-offset:2px }
+.review-body { padding:18px }
+.legend { display:flex; gap:10px; font-size:13px; color:var(--muted) }
+ins,del { padding:1px 3px; border-radius:2px; text-decoration-thickness:1.5px }
+ins { color:#23583d; background:#dceada }
+del { color:#793f4c; background:#f3dfe0 }
+.difference { white-space:pre-wrap; overflow-wrap:anywhere; font-size:16px; line-height:1.95; min-height:122px; margin-block:13px 17px }
+.statusbar { justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); color:var(--plum); font-size:14px }
+details { margin:17px 0 40px; color:var(--muted); font-size:14px } details p { margin-top:8px; max-width:58em }
+@media(max-width:720px) { .wrap { width:calc(100% - 32px) } .intro { margin:24px 0 17px } .workbench { grid-template-columns:1fr } textarea { height:225px } .difference { min-height:65px } }

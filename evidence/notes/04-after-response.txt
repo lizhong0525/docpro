@@ -1,0 +1,11 @@
+200
+data: {"type":"status","phase":"validating","note":"正在本机核对选区与规则结果。"}
+
+data: {"type":"delta","rangeId":0,"text":"居民可以报名。"}
+
+data: {"type":"proposal","proposal":{"requestId":"course-offline-check","docRev":1,"mode":"rewrite","model":"deepseek-flash","analysis":null,"localAnalyses":[{"index":0,"chars":9,"words":8,"lines":1,"blockKind":"paragraph","codeFenceLang":null,"startsMidWord":false,"endsMidWord":false,"startsMidLine":false,"endsMidLine":false,"delimiterWarnings":[],"spansMultipleBlocks":false,"suggestions":[],"startLine":1,"endLine":1,"boundary":{"before":"","after":""}}],"ops":[{"rangeId":0,"from":0,"to":9,"oldText":"居民可以进行报名。","newText":"居民可以报名。","strategy":"rewrite","stats":{"oldChars":9,"newChars":7,"removedChars":2,"addedChars":0}}],"warnings":[],"truncated":false,"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"timings":{"startedAt":1795089364709,"finishedAt":1795089364709,"totalMs":0,"attempts":1,"repairs":0},"raw":"","engine":"offline"}}
+
+data: {"type":"status","phase":"done","note":"本地规则已完成，无外部请求。"}
+
+data: {"type":"done","requestId":"course-offline-check","usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"timings":{"startedAt":1795089364709,"finishedAt":1795089364709,"totalMs":0,"attempts":1,"repairs":0}}
+

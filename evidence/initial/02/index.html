@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>排版校样台 · DocPro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead"><div class="frame"><b lang="en">DocPro</b><span>排版校样台</span></div></header>
+  <main class="frame">
+    <div class="intro">
+      <div><p class="file">河岸观察.md</p><h1>给文字排一版。</h1></div>
+      <p>用同一篇河岸观察手记，比较长文阅读和展板速读的字号、行距与信息层次。</p>
+    </div>
+    <fieldset class="bench">
+      <legend>选择校样用途</legend>
+      <input id="journal" name="format" type="radio" checked><label for="journal">阅读手记</label>
+      <input id="exhibit" name="format" type="radio"><label for="exhibit">展板速读</label>
+      <div class="sheets">
+        <section class="source" aria-labelledby="source-heading">
+          <h2 id="source-heading">原始稿件</h2>
+          <pre># 河岸上的四十分钟
+
+雨停后，沿河步道的低洼处留下几块浅水面。先到的是两只麻雀，它们贴着石阶跳过去，停在草根边啄食。
+
+## 观察方法
+
+每隔十分钟记一次鸟的数量和落点。其余时间站在原处，给它们留出活动空间。</pre>
+        </section>
+        <section class="proof" aria-labelledby="proof-heading">
+          <h2 id="proof-heading">排版校样</h2>
+          <article class="letter">
+            <h3>河岸上的四十分钟</h3>
+            <p>雨停后，沿河步道的低洼处留下几块浅水面。先到的是两只麻雀，它们贴着石阶跳过去，停在草根边啄食。</p>
+            <h4>观察方法</h4>
+            <p>每隔十分钟记一次鸟的数量和落点。其余时间站在原处，给它们留出活动空间。</p>
+          </article>
+        </section>
+      </div>
+      <p class="guide journal-note"><strong>阅读手记</strong>　衬线标题、段首缩进和宽行距，适合从头到尾阅读。</p>
+      <p class="guide exhibit-note"><strong>展板速读</strong>　放大主标题，缩短行长，用色条标出观察方法。</p>
+    </fieldset>
+  </main>
+</body>
+</html>
