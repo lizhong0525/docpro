@@ -31,3 +31,5 @@
 ## 源码与运行环境
 
 Windows x64 免安装启动使用 `runtime/node.exe` 和 `editor/runtime/server.mjs`。其他平台安装 Node.js 22 或更新版本后，可以在本目录执行 `node editor/runtime/server.mjs --prod`。如要继续开发，在 `editor/` 安装锁定依赖，执行 `pnpm typecheck`、`pnpm test` 和 `pnpm build`。小作业可分别直接修改 HTML、CSS 或 JavaScript 后在浏览器刷新。
+
+本仓库为源码与文档版，未包含三处体积较大或含本机隐私的内容：`runtime/node.exe`（88 MB 运行时二进制）、`提交包/` 下的 ZIP 打包产物、`evidence/work/browser/` 中的浏览器配置（含本机登录数据与缓存）。因此克隆后不能直接双击 `启动编辑器.cmd`，请先安装 Node.js 22 或更新版本再执行上面的命令；需要离线免安装包时，把 `node.exe` 放回 `runtime/` 即可。
